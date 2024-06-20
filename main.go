@@ -14,6 +14,8 @@ import (
 
 // TODO: Explore different signature schemes like BasicSchemeMPL, AugSchemeMPL, PopSchemeMPL
 // TODO: Explore batching: say endorsing multiple transactions at a time with a single signature (this might complicate how transactions are allocated to a block and could potentially introduce starvation issues if not handled properly) but will have huge computation and communication wins provided batch size is high (figuring out the correct size is crucial)
+// TODO: Batching keys ahead of time might improve performance even further but we might need to batch (could pre-compute or at least maintain a pool of some pre-computed values (caching)) exponential (in the number of signers (i.e endorsers, orderers, etc.)) number of configuration policies. We might get away with pre-computing for only small subsets of signers.
+// TODO: Make benchmarks more representative and compare against status quo
 
 func SimpleAggregationExample() {
 	seed := []byte{
@@ -172,10 +174,11 @@ func OurProposalAugExample() {
 	// Check for ordering effects in below for performance in hot and cold paths (it probably doesn't make a big difference)'
 	ok = scheme.AggregateVerify([]*blschia.G1Element{orderer_pk, npci_pk, rbi_pk, sbi_pk, hdfc_pk, npci_pk, rbi_pk, sbi_pk, hdfc_pk}, [][]byte{block_payload, txn1_payload, txn1_payload, txn1_payload, txn1_payload, txn2_payload, txn2_payload, txn2_payload, txn2_payload}, block_sign)
 
-	// Observerations:
+	// Observations:
 	// At most having one signature per step or message thereby reducing communication (bandwidth)
 	// No nested signing. That we are signing another signature (ignoring signatures due mTLS). This reduces message size for signatures thereby reducing computation time.
 	// All verifications are comprehensive i.e aggregation has the same verification capabilities as sending individual signatures
+	// Observe that aggregation doesn't need know to know about any parameters. This even applies to hierarchical (i.e. multi-level) aggregation.
 }
 
 func Scratch() {
