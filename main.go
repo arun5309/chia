@@ -77,20 +77,27 @@ func OurProposalAugExample() {
 	hdfc_pk, _ := hdfc_sk.G1Element()
 	orderer_pk, _ := orderer_sk.G1Element()
 
-	// Creating fake transaction proposals (Assuming payload size is about 5000 bytes). Here, proposal is assumed to contain the configuration policy as well.
+	// Creating fake transaction proposals (Assuming payload size is about 5000 bytes).
+	// Here, proposal is assumed to contain the configuration policy as well.
+	// For the sake of simplicity we assume things like endorsers/orderer doesn't add any data (does not include signatures and stuff like that) to the proposal'
 	proposal1, _ := makeRandomArray(5000) // Say for SBI to HDFC transfer
+	// SBI client sends proposal1 to other endorsers i.e NPCI, RBI, (SBI), HDFC
+
 	proposal2, _ := makeRandomArray(5000) // Say for HDFC to SBI transfer
+	// HDFC client sends proposal2 to other endorsers i.e NPCI, RBI, SBI, (HDFC)
 
 	// Creating endorsements for proposals
 	proposal1_npci_endorsement := scheme.Sign(npci_sk, proposal1)
 	proposal1_rbi_endorsement := scheme.Sign(rbi_sk, proposal1)
 	proposal1_sbi_endorsement := scheme.Sign(sbi_sk, proposal1)
 	proposal1_hdfc_endorsement := scheme.Sign(hdfc_sk, proposal1)
+	// SBI client receives endorsements from endorsers (implied that endorsers need to send this to the originating client)
 
 	proposal2_npci_endorsement := scheme.Sign(npci_sk, proposal2)
 	proposal2_rbi_endorsement := scheme.Sign(rbi_sk, proposal2)
 	proposal2_sbi_endorsement := scheme.Sign(sbi_sk, proposal2)
 	proposal2_hdfc_endorsement := scheme.Sign(hdfc_sk, proposal2)
+	// HDFC client receives endorsements from endorsers (implied that endorsers need to send this to the originating client)
 
 	// Aggregating endorsements to obtain transaction payload by the client but the client needs to verify endorsements. Assume, that aggregation ordering always follows some convention like a fixed ordering
 	transaction1_agg_sign := scheme.AggregateSigs(proposal1_npci_endorsement, proposal1_rbi_endorsement, proposal1_sbi_endorsement, proposal1_hdfc_endorsement)
@@ -114,6 +121,7 @@ func OurProposalAugExample() {
 			panic("HDFC endorsement failed")
 		}
 	}
+	// SBI client sends transaction (proposal1 here for simplicity) and the aggregate signature of endorsements to the orderer
 
 	transaction2_agg_sign := scheme.AggregateSigs(proposal2_npci_endorsement, proposal2_rbi_endorsement, proposal2_sbi_endorsement, proposal2_hdfc_endorsement)
 	ok = scheme.AggregateVerify([]*blschia.G1Element{npci_pk, rbi_pk, sbi_pk, hdfc_pk}, [][]byte{proposal2, proposal2, proposal2, proposal2}, transaction2_agg_sign)
@@ -136,6 +144,7 @@ func OurProposalAugExample() {
 			panic("HDFC endorsement failed")
 		}
 	}
+	// HDFC client sends transaction (proposal2 here for simplicity) and the aggregate signature of endorsements to the orderer
 
 	// The orderer combines multiple transactions into a block (need to optimize this number incorporating this proposal).
 	// Two transactions per block is taken here for simplicity.
@@ -155,14 +164,18 @@ func OurProposalAugExample() {
 	block_payload := append(proposal1, proposal2...)
 	block_orderer_sign := scheme.Sign(orderer_sk, block_payload)
 	block_sign := scheme.AggregateSigs(transaction1_agg_sign, transaction2_agg_sign, block_orderer_sign)
+	// The orderer sends block_payload and block_sign to peers for committing
 
-	// Peer verification (needs to be run by each peer)
+	// Peer verification (needs to be run by each peer).
 	txn1_payload := block_payload[:5000]
 	txn2_payload := block_payload[5000:]
-	// Check for ordering effects in below (it probably doesn't make a big difference)'
+	// Check for ordering effects in below for performance in hot and cold paths (it probably doesn't make a big difference)'
 	ok = scheme.AggregateVerify([]*blschia.G1Element{orderer_pk, npci_pk, rbi_pk, sbi_pk, hdfc_pk, npci_pk, rbi_pk, sbi_pk, hdfc_pk}, [][]byte{block_payload, txn1_payload, txn1_payload, txn1_payload, txn1_payload, txn2_payload, txn2_payload, txn2_payload, txn2_payload}, block_sign)
 
-	// TODO: Communication comments
+	// Observerations:
+	// At most having one signature per step or message thereby reducing communication (bandwidth)
+	// No nested signing. That we are signing another signature (ignoring signatures due mTLS). This reduces message size for signatures thereby reducing computation time.
+	// All verifications are comprehensive i.e aggregation has the same verification capabilities as sending individual signatures
 }
 
 func Scratch() {
