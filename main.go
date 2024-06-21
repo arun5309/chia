@@ -214,7 +214,10 @@ func Scratch() {
 	deser, _ := blschia.G2ElementFromBytes(ser)
 	fmt.Println("Deserialized: ", deser)
 	fmt.Println("Merged: ", append(msg1, msg2[:]...))
-
+	fmt.Println("pk size: ", len(pk1.Serialize()))
+	fmt.Println("sk size: ", len(sk1.Serialize()))
+	fmt.Println("sign size: ", len(sig1.Serialize()))
+	fmt.Println("Agg sign size: ", len(aggSig.Serialize()))
 	token := make([]byte, 4)
 	fmt.Println("Unrandomized token:", token)
 	rand.Read(token)
