@@ -179,6 +179,7 @@ func OurProposalAugExample() {
 	// No nested signing. That we are signing another signature (ignoring signatures due mTLS). This reduces message size for signatures thereby reducing computation time.
 	// All verifications are comprehensive i.e aggregation has the same verification capabilities as sending individual signatures
 	// Observe that aggregation doesn't need know to know about any parameters. This even applies to hierarchical (i.e. multi-level) aggregation.
+	// Could be used for roll-ups as well
 }
 
 func Scratch() {
