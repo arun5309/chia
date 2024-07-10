@@ -16,3 +16,9 @@ func BenchmarkOurProposalAugExample(b *testing.B) {
 		OurProposalAugExample()
 	}
 }
+
+func BenchmarkOurProposalPopExample(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		OurProposalPopExample()
+	}
+}
